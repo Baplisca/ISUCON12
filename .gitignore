@@ -2,3 +2,5 @@ initial_data
 webapp/tenant_db
 .*
 !.gitignore
+initial_data
+webapp/tenant_db
