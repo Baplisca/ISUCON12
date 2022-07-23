@@ -1248,30 +1248,12 @@ app.get(
           is_disqualified: !!p.is_disqualified,
         }
 
-        const competitions = await tenantDB.all<CompetitionRow[]>('SELECT * FROM competition WHERE tenant_id = ? ORDER BY created_at ASC', viewer.tenantId)
-
-        const pss: PlayerScoreRow[] = []
+        const pss1 = await tenantDB.all<PlayerScoreRow[]>('SELECT player_score.tenant_id, player_score.id, player_score.player_id, player_score.competition_id, player_score.score, max(player_score.row_num) as row_num, player_score.created_at, player_score.updated_at FROM competition INNER JOIN player_score ON competition.id = player_score.competition_id WHERE competition.id = ? AND player_score.player_id = ? GROUP BY competition.title', viewer.tenantId, playerId);
 
         // player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
         const unlock = await flockByTenantID(viewer.tenantId)
         try {
-          for (const comp of competitions) {
-            const ps = await tenantDB.get<PlayerScoreRow>(
-              // 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
-              'SELECT * FROM player_score WHERE tenant_id = ? AND competition_id = ? AND player_id = ? ORDER BY row_num DESC LIMIT 1',
-              viewer.tenantId,
-              comp.id,
-              p.id
-            )
-            if (!ps) {
-              // 行がない = スコアが記録されてない
-              continue
-            }
-
-            pss.push(ps)
-          }
-
-          for (const ps of pss) {
+          for (const ps of pss1) {
             const comp = await retrieveCompetition(tenantDB, ps.competition_id)
             if (!comp) {
               throw new Error('error retrieveCompetition')
